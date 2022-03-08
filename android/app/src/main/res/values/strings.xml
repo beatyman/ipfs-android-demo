@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">GomobileIPFSExample</string>
+    <string name="titleStarting">IPFS is starting</string>
+    <string name="titlePeerID">Your Peer ID is:</string>
+    <string name="titlePeerIDErr">Error:</string>
+    <string name="titlePeerCon">Peers connected: %1$d</string>
+    <string name="ipAddress">Local IP address is: %1$s</string>
+    <string name="onlineTitle">Work online</string>
+    <string name="offlineTitle">Work online / offline with Bluetooth</string>
+    <string name="titleImageSharing">Sharing image on IPFS</string>
+    <string name="titleImageSharingErr">Sharing image failed</string>
+    <string name="titleImageFetching">Fetching image on IPFS</string>
+    <string name="titleImageFetchingErr">Fetching image failed</string>
+    <string name="titleFetchedImage">Fetched remote image</string>
+    <string name="titleFetchedFile">Fetched remote File</string>
+    <string name="titleXKCDFetching">Fetching XKCD on IPFS</string>
+    <string name="titleXKCDFetchingErr">Fetching XKCD failed</string>
+    <string name="xkcdButton">Random XKCD</string>
+    <string name="shareButton">Share an image</string>
+    <string name="fetchButton">Fetch an image</string>
+    <string name="ble_permissions_explain">To exchange messages offline via Bluetooth even when the app is in background, the Android API requires the location permission to be granted.\\nWe do not use your location data in any way.</string>
+    <string name="ble_permissions_denied">IPFS will start without Bluetooth module</string>
+    <string name="random_xkcd_disable">Random XKCD is not open yet</string>
+    <string name="config_json">{"Datastore":{"StorageMax":"10GB","StorageGCWatermark":90,"GCPeriod":"1h","Spec":{"mounts":[{"child":{"path":"blocks","shardFunc":"/repo/flatfs/shard/v1/next-to-last/2","sync":true,"type":"flatfs"},"mountpoint":"/blocks","prefix":"flatfs.datastore","type":"measure"},{"child":{"compression":"none","path":"datastore","type":"levelds"},"mountpoint":"/","prefix":"leveldb.datastore","type":"measure"}],"type":"mount"},"HashOnRead":false,"BloomFilterSize":0},"Addresses":{"Swarm":["/ip4/0.0.0.0/tcp/0","/ip6/::/tcp/0","/ip4/0.0.0.0/udp/0/quic","/ip6/::/udp/0/quic","/ble/Qmeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"],"Announce":null,"AppendAnnounce":null,"NoAnnounce":null,"API":null,"Gateway":null},"Mounts":{"IPFS":"/ipfs","IPNS":"/ipns","FuseAllowOther":false},"Discovery":{"MDNS":{"Enabled":true,"Interval":10}},"Routing":{"Type":"dhtclient"},"Ipns":{"RepublishPeriod":"","RecordLifetime":"","ResolveCacheSize":128},"Bootstrap":["/ip4/192.168.14.105/tcp/4001/p2p/12D3KooWSDHxwNhUQuJQgBHty9KBUxBwVDjeUv7WkyJveYmaCH6R","/ip4/192.168.79.82/tcp/4001/p2p/12D3KooWS8E8q68ZuE6GhyR44zVcLGafwTtdqViki863VnPQhiMJ"],"Gateway":{"HTTPHeaders":null,"RootRedirect":"","Writable":false,"PathPrefixes":null,"APICommands":null,"NoFetch":false,"NoDNSLink":false,"PublicGateways":null},"API":{"HTTPHeaders":{"Access-Control-Allow-Credentials":["true"],"Access-Control-Allow-Headers":["Authorization"],"Access-Control-Allow-Methods":["PUT","GET","POST","OPTIONS"],"Access-Control-Allow-Origin":["*"],"Access-Control-Expose-Headers":["Location"]}},"Swarm":{"AddrFilters":null,"DisableBandwidthMetrics":false,"DisableNatPortMap":false,"RelayClient":{},"RelayService":{},"Transports":{"Network":{},"Security":{},"Multiplexers":{}},"ConnMgr":{"Type":"basic","LowWater":100,"HighWater":200,"GracePeriod":"20s"}},"AutoNAT":{},"Pubsub":{"Router":"","DisableSigning":false},"Peering":{"Peers":null},"DNS":{"Resolvers":null},"Migration":{"DownloadSources":null,"Keep":""},"Provider":{"Strategy":""},"Reprovider":{"Interval":"12h","Strategy":"all"},"Experimental":{"FilestoreEnabled":false,"UrlstoreEnabled":false,"GraphsyncEnabled":false,"Libp2pStreamMounting":false,"P2pHttpProxy":false,"StrategicProviding":false,"AcceleratedDHTClient":false},"Plugins":{"Plugins":null},"Pinning":{"RemoteServices":null},"Internal":{}}</string>
+    <string name="timing">Download timing: %1$d/%2$s</string>
+</resources>

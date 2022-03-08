@@ -1,0 +1,189 @@
+---
+name: Test
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  go_core:
+    name: Test and build Go Core
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout changes
+        uses: actions/checkout@v2
+
+      - name: Install Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.16
+
+      - name: Set GOPATH in env
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          mkdir -p $(go env GOPATH)/src/github.com/ipfs-shipyard
+          ln -s $PWD $(go env GOPATH)/src/github.com/ipfs-shipyard/gomobile-ipfs
+        shell: bash
+
+      - name: Restore Go mod cache
+        id: cache
+        uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('go/go.sum') }}
+
+      - name: Install Go mod
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: go
+        run: GO111MODULE=on go mod vendor
+
+      - name: Run Go Core tests
+        working-directory: go
+        run: go test ./...
+
+      - name: Install Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+      - name: Set TARGET_SDK in env
+        run: |
+          pip3 install -r packages/utils/manifest_get/requirements.txt
+          export GET_BIN=packages/utils/manifest_get/manifest_get.py
+          export GET_KEY=global.android.target_sdk_version
+          echo "TARGET_SDK=$($GET_BIN $GET_KEY)" >> $GITHUB_ENV
+
+      - name: Install Android SDK
+        run:
+          SDK_MAN=$HOME/Library/Android/sdk/tools/bin/sdkmanager;
+          BTOOLS=$($SDK_MAN --list | grep "build-tools;$TARGET_SDK");
+          BTOOL=$(echo $BTOOLS | tail -n1 | cut -d'|' -f1 | tr -d ' ');
+          PLATFORMS=$($SDK_MAN --list | grep "platforms;android-$TARGET_SDK");
+          PLATFORM=$(echo $PLATFORMS | tail -n1 | cut -d'|' -f1 | tr -d ' ');
+
+          $SDK_MAN --install "$BTOOL" platform-tools "$PLATFORM" ndk-bundle
+          > /dev/null
+
+      - name: Build Go Core
+        working-directory: packages
+        run: |
+          make build_core.android GOMOBILE_TARGET=/amd64
+          make build_core.ios
+
+      - name: Save build outputs
+        uses: actions/upload-artifact@v1
+        with:
+          name: build-${{ github.run_id }}
+          path: packages/build
+
+  android_bridge:
+    name: Test Android Bridge
+    needs: go_core
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout changes
+        uses: actions/checkout@v2
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: Restore build outputs
+        uses: actions/download-artifact@v1
+        with:
+          name: build-${{ github.run_id }}
+          path: packages/build
+
+      - name: Set TARGET_SDK in env
+        run: |
+          pip3 install -r packages/utils/manifest_get/requirements.txt
+          export GET_BIN=packages/utils/manifest_get/manifest_get.py
+          export GET_KEY=global.android.target_sdk_version
+          echo "TARGET_SDK=$($GET_BIN $GET_KEY)" >> $GITHUB_ENV
+
+      - name: Install Android SDK and Emulator
+        run:
+          SDK_MAN=$HOME/Library/Android/sdk/tools/bin/sdkmanager;
+          BTOOLS=$($SDK_MAN --list | grep "build-tools;$TARGET_SDK");
+          BTOOL=$(echo $BTOOLS | tail -n1 | cut -d'|' -f1 | tr -d ' ');
+          PLATFORMS=$($SDK_MAN --list | grep "platforms;android-$TARGET_SDK");
+          PLATFORM=$(echo $PLATFORMS | tail -n1 | cut -d'|' -f1 | tr -d ' ');
+
+          $SDK_MAN --install "$BTOOL" platform-tools "$PLATFORM" emulator
+          "system-images;android-$TARGET_SDK;default;x86_64" > /dev/null
+
+          echo no | $HOME/Library/Android/sdk/tools/bin/avdmanager
+          create avd --force -n test --abi 'default/x86_64'
+          --package "system-images;android-$TARGET_SDK;default;x86_64"
+
+      - name: Run Android Bridge tests
+        working-directory: android
+        run:
+          $HOME/Library/Android/sdk/emulator/emulator -avd test -no-boot-anim
+          -no-window -no-snapshot-save -gpu swiftshader_indirect -noaudio
+          & EMULATOR_PID=$!;
+
+          $HOME/Library/Android/sdk/platform-tools/adb wait-for-device shell
+          'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 2; done;';
+
+          ./gradlew bridge:test bridge:connectedAndroidTest; kill $EMULATOR_PID
+
+      - name: Build Android Bridge
+        working-directory: android
+        run: ./gradlew bridge:javadocJar bridge:sourcesJar bridge:assemble
+
+  ios_bridge:
+    name: Test iOS Bridge
+    needs: go_core
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout changes
+        uses: actions/checkout@v2
+
+      - name: Restore build outputs
+        uses: actions/download-artifact@v1
+        with:
+          name: build-${{ github.run_id }}
+          path: packages/build
+
+      - name: Set simulator destination in env
+        working-directory: ios/Bridge
+        run:
+          DESTINATION=$(
+            xcodebuild -showdestinations
+              -project GomobileIPFS.xcodeproj
+              -scheme GomobileIPFS
+            | awk '/Ineligible destinations for/ {exit} {print}'
+            | grep 'platform:iOS Simulator'
+            | awk -F 'id:' '{print $2}'
+            | cut -d',' -f1
+            | tail -n1
+          );
+          if [ -z "$DESTINATION" ]; then
+            echo "::error::No compatible simulator found to run the test"
+            exit 1;
+          fi;
+          echo "DESTINATION=$DESTINATION" >> $GITHUB_ENV
+
+      - name: Run iOS Bridge tests
+        working-directory: ios/Bridge
+        run:
+          xcodebuild test
+            -project GomobileIPFS.xcodeproj
+            -scheme GomobileIPFS
+            -sdk iphonesimulator
+            -destination "platform=iOS Simulator,id=$DESTINATION"
+
+      - name: Build iOS Bridge
+        working-directory: packages
+        run:
+          xcodebuild
+            -project ../ios/Bridge/GomobileIPFS.xcodeproj
+            -scheme GomobileIPFS
+            -sdk iphonesimulator
+            -destination "platform=iOS Simulator,id=$DESTINATION"
+          && pip3 install -r utils/cocoapod_format/requirements.txt
+          && utils/cocoapod_format/cocoapod_format_bridge.py
